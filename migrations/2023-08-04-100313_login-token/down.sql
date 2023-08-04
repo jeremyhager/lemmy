@@ -1,1 +1,2 @@
-drop table login_token;
+DROP TABLE login_token;
+
