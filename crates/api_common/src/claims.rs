@@ -1,6 +1,6 @@
 use crate::{context::LemmyContext, sensitive::Sensitive};
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use lemmy_db_schema::{
   newtypes::LocalUserId,
   source::login_token::{LoginToken, LoginTokenCreateForm},
@@ -11,14 +11,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
   /// local_user_id, standard claim by RFC 7519.
-  pub sub: i32,
+  pub sub: String,
   pub iss: String,
   /// Time when this token was issued as UNIX-timestamp in seconds
   pub iat: i64,
 }
 
 impl Claims {
-  pub async fn validate(jwt: &str, context: &LemmyContext) -> LemmyResult<TokenData<Claims>> {
+  pub async fn validate(jwt: &str, context: &LemmyContext) -> LemmyResult<LocalUserId> {
     // TODO: check db
     let mut validation = Validation::default();
     validation.validate_exp = false;
@@ -27,12 +27,13 @@ impl Claims {
     let key = DecodingKey::from_secret(jwt_secret.as_ref());
     let claims =
       decode::<Claims>(jwt, &key, &validation).with_lemmy_type(LemmyErrorType::NotLoggedIn)?;
+    let user_id = LocalUserId(claims.claims.sub.parse()?);
     let is_valid =
-      LoginToken::validate(&mut context.pool(), LocalUserId(claims.claims.sub), jwt).await?;
+      LoginToken::validate(&mut context.pool(), user_id, jwt).await?;
     if !is_valid {
       return Err(LemmyErrorType::NotLoggedIn)?;
     }
-    Ok(claims)
+    Ok(user_id)
   }
 
   pub async fn generate(
@@ -41,7 +42,7 @@ impl Claims {
   ) -> LemmyResult<Sensitive<String>> {
     let hostname = context.settings().hostname.clone();
     let my_claims = Claims {
-      sub: user_id.0,
+      sub: user_id.0.to_string(),
       iss: hostname,
       iat: Utc::now().timestamp(),
     };

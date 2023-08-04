@@ -3,7 +3,6 @@ use anyhow::anyhow;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use lemmy_api_common::{claims::Claims, context::LemmyContext};
 use lemmy_db_schema::{
-  newtypes::LocalUserId,
   source::{community::Community, local_user::LocalUser, person::Person},
   traits::{ApubActor, Crud},
   CommentSortType,
@@ -310,7 +309,7 @@ async fn get_feed_front(
   let pool = &mut context.pool();
   let protocol_and_hostname = context.settings().get_protocol_and_hostname();
   let site_view = SiteView::read_local(pool).await?;
-  let local_user_id = LocalUserId(Claims::validate(jwt, context).await?.claims.sub);
+  let local_user_id = Claims::validate(jwt, context).await?;
   let local_user = LocalUserView::read(pool, local_user_id).await?;
 
   let posts = PostQuery {
@@ -346,7 +345,7 @@ async fn get_feed_inbox(jwt: &str, context: &LemmyContext) -> Result<ChannelBuil
   let protocol_and_hostname = context.settings().get_protocol_and_hostname();
 
   let site_view = SiteView::read_local(pool).await?;
-  let local_user_id = LocalUserId(Claims::validate(jwt, context).await?.claims.sub);
+  let local_user_id = Claims::validate(jwt, context).await?;
   let local_user = LocalUser::read(pool, local_user_id).await?;
   let person_id = local_user.person_id;
   let show_bot_accounts = local_user.show_bot_accounts;

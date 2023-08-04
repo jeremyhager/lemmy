@@ -6,14 +6,13 @@ use crate::{
     email_verified,
     local_user,
     password_encrypted,
-    validator_time,
   },
   source::{
     actor_language::{LocalUserLanguage, SiteLanguage},
     local_user::{LocalUser, LocalUserInsertForm, LocalUserUpdateForm},
   },
   traits::Crud,
-  utils::{get_conn, naive_now, DbPool},
+  utils::{get_conn, DbPool},
 };
 use bcrypt::{hash, DEFAULT_COST};
 use diesel::{dsl::insert_into, result::Error, ExpressionMethods, QueryDsl};
@@ -31,7 +30,6 @@ impl LocalUser {
     diesel::update(local_user.find(local_user_id))
       .set((
         password_encrypted.eq(password_hash),
-        validator_time.eq(naive_now()),
       ))
       .get_result::<Self>(conn)
       .await

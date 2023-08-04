@@ -40,7 +40,7 @@ impl LoginToken {
   }
 
   pub async fn invalidate_all() {
-    // call on password reset/change
+    // TODO: call on password reset/change, account deletion, site ban
     todo!()
   }
 }

@@ -9,7 +9,7 @@ use anyhow::Context;
 use chrono::NaiveDateTime;
 use lemmy_db_schema::{
   impls::person::is_banned,
-  newtypes::{CommunityId, DbUrl, LocalUserId, PersonId, PostId},
+  newtypes::{CommunityId, DbUrl, PersonId, PostId},
   source::{
     comment::{Comment, CommentUpdateForm},
     community::{Community, CommunityModerator, CommunityUpdateForm},
@@ -137,16 +137,13 @@ pub async fn local_user_view_from_jwt(
   jwt: &str,
   context: &LemmyContext,
 ) -> Result<LocalUserView, LemmyError> {
-  let claims = Claims::validate(jwt, context).await?.claims;
-  let local_user_id = LocalUserId(claims.sub);
+  let local_user_id = Claims::validate(jwt, context).await?;
   let local_user_view = LocalUserView::read(&mut context.pool(), local_user_id).await?;
   check_user_valid(
     local_user_view.person.banned,
     local_user_view.person.ban_expires,
     local_user_view.person.deleted,
   )?;
-
-  check_validator_time(&local_user_view.local_user.validator_time, &claims)?;
 
   Ok(local_user_view)
 }
@@ -166,19 +163,6 @@ pub async fn local_user_view_from_jwt_opt_new(
 ) {
   if local_user_view.is_none() {
     *local_user_view = local_user_view_from_jwt_opt(jwt, context).await;
-  }
-}
-
-/// Checks if user's token was issued before user's password reset.
-pub fn check_validator_time(
-  validator_time: &NaiveDateTime,
-  claims: &Claims,
-) -> Result<(), LemmyError> {
-  let user_validation_time = validator_time.timestamp();
-  if user_validation_time > claims.iat {
-    Err(LemmyErrorType::NotLoggedIn)?
-  } else {
-    Ok(())
   }
 }
 

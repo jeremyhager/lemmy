@@ -33,8 +33,6 @@ pub struct LocalUser {
   /// Whether to show avatars.
   pub show_avatars: bool,
   pub send_notifications_to_email: bool,
-  /// A validation ID used in logging out sessions.
-  pub validator_time: chrono::NaiveDateTime,
   /// Whether to show comment / post scores.
   pub show_scores: bool,
   /// Whether to show bot accounts.

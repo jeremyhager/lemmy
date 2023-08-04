@@ -4,10 +4,9 @@ use lemmy_api_common::{
   context::LemmyContext,
   sensitive::Sensitive,
   site::{GetSite, GetSiteResponse, MyUserInfo},
-  utils::{check_user_valid, check_validator_time},
+  utils::{check_user_valid},
 };
 use lemmy_db_schema::{
-  newtypes::LocalUserId,
   source::{
     actor_language::{LocalUserLanguage, SiteLanguage},
     language::Language,
@@ -102,8 +101,7 @@ async fn local_user_settings_view_from_jwt_opt(
 ) -> Option<LocalUserView> {
   match jwt {
     Some(jwt) => {
-      let claims = Claims::validate(jwt.as_ref(), context).await.ok()?.claims;
-      let local_user_id = LocalUserId(claims.sub);
+      let local_user_id = Claims::validate(jwt.as_ref(), context).await.ok()?;
       let local_user_view = LocalUserView::read(&mut context.pool(), local_user_id)
         .await
         .ok()?;
@@ -113,8 +111,6 @@ async fn local_user_settings_view_from_jwt_opt(
         local_user_view.person.deleted,
       )
       .ok()?;
-
-      check_validator_time(&local_user_view.local_user.validator_time, &claims).ok()?;
 
       Some(local_user_view)
     }
