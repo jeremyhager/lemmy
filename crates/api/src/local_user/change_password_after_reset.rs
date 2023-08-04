@@ -7,6 +7,7 @@ use lemmy_api_common::{
 };
 use lemmy_db_schema::source::{
   local_user::LocalUser,
+  login_token::LoginToken,
   password_reset_request::PasswordResetRequest,
 };
 use lemmy_utils::error::{LemmyError, LemmyErrorExt, LemmyErrorType};
@@ -37,6 +38,8 @@ impl Perform for PasswordChangeAfterReset {
     LocalUser::update_password(&mut context.pool(), local_user_id, &password)
       .await
       .with_lemmy_type(LemmyErrorType::CouldntUpdateUser)?;
+
+    LoginToken::invalidate_all(&mut context.pool(), local_user_id).await?;
 
     Ok(LoginResponse {
       jwt: None,

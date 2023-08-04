@@ -18,6 +18,7 @@ use lemmy_api::{
     login::login,
     logout::logout,
     notifications::mark_reply_read::mark_reply_as_read,
+    save_settings::save_user_settings,
   },
   post::{feature::feature_post, like::like_post, lock::lock_post},
   post_report::create::create_post_report,
@@ -300,10 +301,7 @@ pub fn config(cfg: &mut web::ServiceConfig, rate_limit: &RateLimitCell) {
             "/mark_all_as_read",
             web::post().to(route_post::<MarkAllAsRead>),
           )
-          .route(
-            "/save_user_settings",
-            web::put().to(route_post::<SaveUserSettings>),
-          )
+          .route("/save_user_settings", web::put().to(save_user_settings))
           .route(
             "/change_password",
             web::put().to(route_post::<ChangePassword>),

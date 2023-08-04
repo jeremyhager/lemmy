@@ -38,6 +38,7 @@ impl Perform for PasswordReset {
 
     // Email the pure token to the user.
     send_password_reset_email(&local_user_view, &mut context.pool(), context.settings()).await?;
+
     Ok(PasswordResetResponse {})
   }
 }

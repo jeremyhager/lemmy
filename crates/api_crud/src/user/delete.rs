@@ -7,6 +7,7 @@ use lemmy_api_common::{
   send_activity::{ActivityChannel, SendActivityData},
   utils::local_user_view_from_jwt,
 };
+use lemmy_db_schema::source::login_token::LoginToken;
 use lemmy_utils::error::{LemmyError, LemmyErrorType};
 
 #[tracing::instrument(skip(context))]
@@ -25,6 +26,8 @@ pub async fn delete_account(
   if !valid {
     return Err(LemmyErrorType::IncorrectLogin)?;
   }
+
+  LoginToken::invalidate_all(&mut context.pool(), local_user_view.local_user.id).await?;
 
   ActivityChannel::submit_activity(
     SendActivityData::DeleteUser(local_user_view.person),

@@ -17,6 +17,7 @@ impl LoginToken {
       .await
   }
 
+  /// Check if the given token is valid for user.
   pub async fn validate(
     pool: &mut DbPool<'_>,
     user_id_: LocalUserId,
@@ -32,15 +33,22 @@ impl LoginToken {
     .await
   }
 
-  pub async fn invalidate(pool: &mut DbPool<'_>, token_: &str) -> Result<Self, Error> {
+  /// Invalidate specific token on user logout.
+  pub async fn invalidate(pool: &mut DbPool<'_>, token_: &str) -> Result<usize, Error> {
     let conn = &mut get_conn(pool).await?;
     delete(login_token.filter(token.eq(token_)))
-      .get_result(conn)
+      .execute(conn)
       .await
   }
 
-  pub async fn invalidate_all() {
-    // TODO: call on password reset/change, account deletion, site ban
-    todo!()
+  /// Invalidate all logins of given user on password reset/change, account deletion or site ban.
+  pub async fn invalidate_all(
+    pool: &mut DbPool<'_>,
+    user_id_: LocalUserId,
+  ) -> Result<usize, Error> {
+    let conn = &mut get_conn(pool).await?;
+    delete(login_token.filter(user_id.eq(user_id_)))
+      .execute(conn)
+      .await
   }
 }

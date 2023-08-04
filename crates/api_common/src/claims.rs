@@ -19,7 +19,6 @@ pub struct Claims {
 
 impl Claims {
   pub async fn validate(jwt: &str, context: &LemmyContext) -> LemmyResult<LocalUserId> {
-    // TODO: check db
     let mut validation = Validation::default();
     validation.validate_exp = false;
     validation.required_spec_claims.remove("exp");

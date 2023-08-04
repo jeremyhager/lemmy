@@ -7,7 +7,7 @@ use lemmy_api_common::{
   person::{ChangePassword, LoginResponse},
   utils::{local_user_view_from_jwt, password_length_check},
 };
-use lemmy_db_schema::source::local_user::LocalUser;
+use lemmy_db_schema::source::{local_user::LocalUser, login_token::LoginToken};
 use lemmy_utils::error::{LemmyError, LemmyErrorType};
 
 #[async_trait::async_trait(?Send)]
@@ -40,6 +40,8 @@ impl Perform for ChangePassword {
     let new_password = data.new_password.clone();
     let updated_local_user =
       LocalUser::update_password(&mut context.pool(), local_user_id, &new_password).await?;
+
+    LoginToken::invalidate_all(&mut context.pool(), local_user_view.local_user.id).await?;
 
     // Return the jwt
     Ok(LoginResponse {
