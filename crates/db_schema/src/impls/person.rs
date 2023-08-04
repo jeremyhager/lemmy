@@ -14,7 +14,6 @@ use crate::{
 use diesel::{dsl::insert_into, result::Error, ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::RunQueryDsl;
 
-
 #[async_trait]
 impl Crud for Person {
   type InsertForm = PersonInsertForm;
@@ -68,9 +67,7 @@ impl Person {
 
     // Set the local user info to none
     diesel::update(local_user::table.filter(local_user::person_id.eq(person_id)))
-      .set((
-        local_user::email.eq::<Option<String>>(None),
-      ))
+      .set((local_user::email.eq::<Option<String>>(None),))
       .execute(conn)
       .await?;
 

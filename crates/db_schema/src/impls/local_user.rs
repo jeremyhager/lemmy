@@ -28,9 +28,7 @@ impl LocalUser {
     let password_hash = hash(new_password, DEFAULT_COST).expect("Couldn't hash password");
 
     diesel::update(local_user.find(local_user_id))
-      .set((
-        password_encrypted.eq(password_hash),
-      ))
+      .set((password_encrypted.eq(password_hash),))
       .get_result::<Self>(conn)
       .await
   }

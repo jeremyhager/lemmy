@@ -28,8 +28,7 @@ impl Claims {
     let claims =
       decode::<Claims>(jwt, &key, &validation).with_lemmy_type(LemmyErrorType::NotLoggedIn)?;
     let user_id = LocalUserId(claims.claims.sub.parse()?);
-    let is_valid =
-      LoginToken::validate(&mut context.pool(), user_id, jwt).await?;
+    let is_valid = LoginToken::validate(&mut context.pool(), user_id, jwt).await?;
     if !is_valid {
       return Err(LemmyErrorType::NotLoggedIn)?;
     }

@@ -4,14 +4,12 @@ use lemmy_api_common::{
   context::LemmyContext,
   sensitive::Sensitive,
   site::{GetSite, GetSiteResponse, MyUserInfo},
-  utils::{check_user_valid},
+  utils::check_user_valid,
 };
-use lemmy_db_schema::{
-  source::{
-    actor_language::{LocalUserLanguage, SiteLanguage},
-    language::Language,
-    tagline::Tagline,
-  },
+use lemmy_db_schema::source::{
+  actor_language::{LocalUserLanguage, SiteLanguage},
+  language::Language,
+  tagline::Tagline,
 };
 use lemmy_db_views::structs::{CustomEmojiView, LocalUserView, SiteView};
 use lemmy_db_views_actor::structs::{

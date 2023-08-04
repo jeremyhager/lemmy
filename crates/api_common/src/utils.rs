@@ -4,7 +4,9 @@ use crate::{
   request::purge_image_from_pictrs,
   sensitive::Sensitive,
   site::FederatedInstances,
+  AUTH_COOKIE_NAME,
 };
+use actix_web::cookie::{Cookie, SameSite};
 use anyhow::Context;
 use chrono::NaiveDateTime;
 use lemmy_db_schema::{
@@ -799,6 +801,14 @@ pub fn sanitize_html(data: &str) -> String {
 
 pub fn sanitize_html_opt(data: &Option<String>) -> Option<String> {
   data.as_ref().map(|d| sanitize_html(d))
+}
+
+pub fn create_login_cookie(jwt: Sensitive<String>) -> Cookie<'static> {
+  let mut cookie = Cookie::new(AUTH_COOKIE_NAME, jwt.into_inner());
+  cookie.set_secure(true);
+  cookie.set_same_site(SameSite::Strict);
+  cookie.set_http_only(true);
+  cookie
 }
 
 #[cfg(test)]

@@ -11,7 +11,7 @@ use lemmy_api_common::{
   claims::Claims,
   context::LemmyContext,
   person::{Login, LoginResponse},
-  utils::{check_registration_application, check_user_valid},
+  utils::{check_registration_application, check_user_valid, create_login_cookie},
   AUTH_COOKIE_NAME,
 };
 use lemmy_db_views::structs::{LocalUserView, SiteView};
@@ -76,11 +76,8 @@ pub async fn login(
     verify_email_sent: false,
     registration_created: false,
   };
-  let mut cookie = Cookie::new(AUTH_COOKIE_NAME, jwt.into_inner());
-  cookie.set_secure(true);
-  cookie.set_same_site(SameSite::Strict);
-  cookie.set_http_only(true);
+
   let mut res = HttpResponse::Ok().json(json);
-  res.add_cookie(&cookie)?;
+  res.add_cookie(&create_login_cookie(jwt))?;
   Ok(res)
 }
