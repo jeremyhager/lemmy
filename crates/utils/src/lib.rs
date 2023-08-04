@@ -9,7 +9,6 @@ pub mod email;
 pub mod rate_limit;
 pub mod settings;
 
-pub mod claims;
 pub mod error;
 pub mod request;
 pub mod response;

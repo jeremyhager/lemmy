@@ -13,7 +13,12 @@ use lemmy_api::{
     follow::follow_community,
     hide::hide_community,
   },
-  local_user::{ban_person::ban_from_site, notifications::mark_reply_read::mark_reply_as_read},
+  local_user::{
+    ban_person::ban_from_site,
+    login::login,
+    logout::logout,
+    notifications::mark_reply_read::mark_reply_as_read,
+  },
   post::{feature::feature_post, like::like_post, lock::lock_post},
   post_report::create::create_post_report,
   Perform,
@@ -279,7 +284,8 @@ pub fn config(cfg: &mut web::ServiceConfig, rate_limit: &RateLimitCell) {
           .route("/banned", web::get().to(route_get::<GetBannedPersons>))
           .route("/block", web::post().to(route_post::<BlockPerson>))
           // Account actions. I don't like that they're in /user maybe /accounts
-          .route("/login", web::post().to(route_post::<Login>))
+          .route("/login", web::post().to(login))
+          .route("/logout", web::post().to(logout))
           .route("/delete_account", web::post().to(delete_account))
           .route(
             "/password_reset",

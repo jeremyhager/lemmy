@@ -1,6 +1,7 @@
 use activitypub_federation::{config::Data, http_signatures::generate_actor_keypair};
 use actix_web::web::Json;
 use lemmy_api_common::{
+  claims::Claims,
   context::LemmyContext,
   person::{LoginResponse, Register},
   utils::{
@@ -29,7 +30,6 @@ use lemmy_db_schema::{
 };
 use lemmy_db_views::structs::{LocalUserView, SiteView};
 use lemmy_utils::{
-  claims::Claims,
   error::{LemmyError, LemmyErrorExt, LemmyErrorType},
   utils::{
     slurs::{check_slurs, check_slurs_opt},
@@ -168,14 +168,7 @@ pub async fn register(
   if !local_site.site_setup
     || (!require_registration_application && !local_site.require_email_verification)
   {
-    login_response.jwt = Some(
-      Claims::jwt(
-        inserted_local_user.id.0,
-        &context.secret().jwt_secret,
-        &context.settings().hostname,
-      )?
-      .into(),
-    );
+    login_response.jwt = Some(Claims::generate(inserted_local_user.id, &context).await?);
   } else {
     if local_site.require_email_verification {
       let local_user_view = LocalUserView {

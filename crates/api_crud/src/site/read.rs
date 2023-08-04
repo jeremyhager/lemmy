@@ -1,5 +1,6 @@
 use actix_web::web::{Data, Json, Query};
 use lemmy_api_common::{
+  claims::Claims,
   context::LemmyContext,
   sensitive::Sensitive,
   site::{GetSite, GetSiteResponse, MyUserInfo},
@@ -22,7 +23,6 @@ use lemmy_db_views_actor::structs::{
   PersonView,
 };
 use lemmy_utils::{
-  claims::Claims,
   error::{LemmyError, LemmyErrorExt, LemmyErrorType},
   version,
 };
@@ -102,9 +102,7 @@ async fn local_user_settings_view_from_jwt_opt(
 ) -> Option<LocalUserView> {
   match jwt {
     Some(jwt) => {
-      let claims = Claims::decode(jwt.as_ref(), &context.secret().jwt_secret)
-        .ok()?
-        .claims;
+      let claims = Claims::validate(jwt.as_ref(), context).await.ok()?.claims;
       let local_user_id = LocalUserId(claims.sub);
       let local_user_view = LocalUserView::read(&mut context.pool(), local_user_id)
         .await

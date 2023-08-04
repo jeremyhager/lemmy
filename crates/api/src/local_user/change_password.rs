@@ -2,15 +2,13 @@ use crate::Perform;
 use actix_web::web::Data;
 use bcrypt::verify;
 use lemmy_api_common::{
+  claims::Claims,
   context::LemmyContext,
   person::{ChangePassword, LoginResponse},
   utils::{local_user_view_from_jwt, password_length_check},
 };
 use lemmy_db_schema::source::local_user::LocalUser;
-use lemmy_utils::{
-  claims::Claims,
-  error::{LemmyError, LemmyErrorType},
-};
+use lemmy_utils::error::{LemmyError, LemmyErrorType};
 
 #[async_trait::async_trait(?Send)]
 impl Perform for ChangePassword {
@@ -45,14 +43,7 @@ impl Perform for ChangePassword {
 
     // Return the jwt
     Ok(LoginResponse {
-      jwt: Some(
-        Claims::jwt(
-          updated_local_user.id.0,
-          &context.secret().jwt_secret,
-          &context.settings().hostname,
-        )?
-        .into(),
-      ),
+      jwt: Some(Claims::generate(updated_local_user.id, context).await?),
       verify_email_sent: false,
       registration_created: false,
     })

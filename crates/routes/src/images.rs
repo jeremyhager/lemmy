@@ -11,9 +11,9 @@ use actix_web::{
   HttpResponse,
 };
 use futures::stream::{Stream, StreamExt};
-use lemmy_api_common::{context::LemmyContext, utils::local_user_view_from_jwt};
+use lemmy_api_common::{claims::Claims, context::LemmyContext, utils::local_user_view_from_jwt};
 use lemmy_db_schema::source::local_site::LocalSite;
-use lemmy_utils::{claims::Claims, rate_limit::RateLimitCell, REQWEST_TIMEOUT};
+use lemmy_utils::{rate_limit::RateLimitCell, REQWEST_TIMEOUT};
 use reqwest::Body;
 use reqwest_middleware::{ClientWithMiddleware, RequestBuilder};
 use serde::{Deserialize, Serialize};
@@ -96,7 +96,7 @@ async fn upload(
     .cookie("jwt")
     .expect("No auth header for picture upload");
 
-  if Claims::decode(jwt.value(), &context.secret().jwt_secret).is_err() {
+  if Claims::validate(jwt.value(), &context).await.is_err() {
     return Ok(HttpResponse::Unauthorized().finish());
   };
 

@@ -79,7 +79,7 @@ mod tests {
   #![allow(clippy::unwrap_used)]
   #![allow(clippy::indexing_slicing)]
 
-  use lemmy_api_common::utils::check_validator_time;
+  use lemmy_api_common::{claims::Claims, utils::check_validator_time};
   use lemmy_db_schema::{
     source::{
       instance::Instance,
@@ -90,7 +90,7 @@ mod tests {
     traits::Crud,
     utils::build_db_pool_for_tests,
   };
-  use lemmy_utils::{claims::Claims, settings::SETTINGS};
+  use lemmy_utils::settings::SETTINGS;
   use serial_test::serial;
 
   #[tokio::test]
@@ -120,13 +120,13 @@ mod tests {
 
     let inserted_local_user = LocalUser::create(pool, &local_user_form).await.unwrap();
 
-    let jwt = Claims::jwt(
+    let jwt = Claims::generate(
       inserted_local_user.id.0,
       &secret.jwt_secret,
       &settings.hostname,
     )
     .unwrap();
-    let claims = Claims::decode(&jwt, &secret.jwt_secret).unwrap().claims;
+    let claims = Claims::validate(&jwt, &secret.jwt_secret).unwrap().claims;
     let check = check_validator_time(&inserted_local_user.validator_time, &claims);
     assert!(check.is_ok());
 

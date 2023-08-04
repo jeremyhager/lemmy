@@ -1,4 +1,5 @@
 use crate::{
+  claims::Claims,
   context::LemmyContext,
   request::purge_image_from_pictrs,
   sensitive::Sensitive,
@@ -33,7 +34,6 @@ use lemmy_db_views_actor::structs::{
   CommunityView,
 };
 use lemmy_utils::{
-  claims::Claims,
   email::{send_email, translations::Lang},
   error::{LemmyError, LemmyErrorExt, LemmyErrorExt2, LemmyErrorType},
   location_info,
@@ -137,9 +137,7 @@ pub async fn local_user_view_from_jwt(
   jwt: &str,
   context: &LemmyContext,
 ) -> Result<LocalUserView, LemmyError> {
-  let claims = Claims::decode(jwt, &context.secret().jwt_secret)
-    .with_lemmy_type(LemmyErrorType::NotLoggedIn)?
-    .claims;
+  let claims = Claims::validate(jwt, context).await?.claims;
   let local_user_id = LocalUserId(claims.sub);
   let local_user_view = LocalUserView::read(&mut context.pool(), local_user_id).await?;
   check_user_valid(

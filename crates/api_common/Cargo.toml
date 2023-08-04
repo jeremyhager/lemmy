@@ -35,6 +35,7 @@ full = [
   "futures",
   "once_cell",
   "ammonia",
+  "jsonwebtoken"
 ]
 
 [dependencies]
@@ -68,3 +69,4 @@ actix-web = { workspace = true, optional = true }
 # necessary for wasmt compilation
 getrandom = { version = "0.2.10", features = ["js"] }
 ammonia = { version = "3.3.0", optional = true }
+jsonwebtoken = { version = "8.3.0", optional = true }

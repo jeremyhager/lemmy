@@ -8,7 +8,7 @@ use actix_web::{
 };
 use core::future::Ready;
 use futures_util::future::LocalBoxFuture;
-use lemmy_api_common::{context::LemmyContext, utils::local_user_view_from_jwt};
+use lemmy_api_common::{context::LemmyContext, utils::local_user_view_from_jwt, AUTH_COOKIE_NAME};
 use lemmy_utils::error::{LemmyError, LemmyErrorType};
 use reqwest::header::HeaderValue;
 use std::{future::ready, rc::Rc};
@@ -65,19 +65,19 @@ where
     let context = self.context.clone();
 
     Box::pin(async move {
-      let mut is_auth = false;
-      // Try reading jwt from auth header
-      let auth_header = req.headers().get("auth").and_then(|h| h.to_str().ok());
-      if let Some(a) = auth_header {
-        let local_user_view = local_user_view_from_jwt(a, &context).await?;
-        req.extensions_mut().insert(local_user_view);
-        is_auth = true;
+      // Try reading jwt from auth header (using same name as cookie)
+      let auth_header = req
+        .headers()
+        .get(AUTH_COOKIE_NAME)
+        .and_then(|h| h.to_str().ok());
+      let jwt = if let Some(auth_header) = auth_header {
+        Some(auth_header.to_string())
       }
       // If that fails, try auth cookie. Dont use the `jwt` cookie from lemmy-ui because
       // its not http-only.
       else {
-        let auth_cookie = req.cookie("auth");
-        if let Some(a) = auth_cookie {
+        let auth_cookie = req.cookie(AUTH_COOKIE_NAME);
+        if let Some(a) = &auth_cookie {
           // ensure that its marked as httponly and secure
           let secure = a.secure().unwrap_or_default();
           let http_only = a.http_only().unwrap_or_default();
@@ -85,17 +85,20 @@ where
           if !secure || !http_only || same_site != Some(SameSite::Strict) {
             return Err(LemmyError::from(LemmyErrorType::AuthCookieInsecure).into());
           }
-          let local_user_view = local_user_view_from_jwt(a.value(), &context).await?;
-          req.extensions_mut().insert(local_user_view);
-          is_auth = true;
         }
+        auth_cookie.map(|c| c.value().to_string())
+      };
+
+      if let Some(jwt) = &jwt {
+        let local_user_view = local_user_view_from_jwt(jwt, &context).await?;
+        req.extensions_mut().insert(local_user_view);
       }
 
       let mut res = svc.call(req).await?;
 
       // Add cache-control header. If user is authenticated, mark as private. Otherwise cache
       // up to one minute.
-      let cache_value = if is_auth {
+      let cache_value = if jwt.is_some() {
         "private"
       } else {
         "public, max-age=60"

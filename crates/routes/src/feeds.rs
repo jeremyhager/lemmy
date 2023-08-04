@@ -1,12 +1,11 @@
 use actix_web::{error::ErrorBadRequest, web, Error, HttpRequest, HttpResponse, Result};
 use anyhow::anyhow;
 use chrono::{DateTime, NaiveDateTime, Utc};
-use lemmy_api_common::context::LemmyContext;
+use lemmy_api_common::{claims::Claims, context::LemmyContext};
 use lemmy_db_schema::{
   newtypes::LocalUserId,
   source::{community::Community, local_user::LocalUser, person::Person},
   traits::{ApubActor, Crud},
-  utils::DbPool,
   CommentSortType,
   ListingType,
   SortType,
@@ -22,7 +21,6 @@ use lemmy_db_views_actor::{
 };
 use lemmy_utils::{
   cache_header::cache_1hour,
-  claims::Claims,
   error::LemmyError,
   utils::markdown::markdown_to_html,
 };
@@ -182,53 +180,38 @@ async fn get_feed(
     _ => return Err(ErrorBadRequest(LemmyError::from(anyhow!("wrong_type")))),
   };
 
-  let jwt_secret = context.secret().jwt_secret.clone();
-  let protocol_and_hostname = context.settings().get_protocol_and_hostname();
-
   let builder = match request_type {
     RequestType::User => {
       get_feed_user(
-        &mut context.pool(),
         &info.sort_type()?,
         &info.get_limit(),
         &info.get_page(),
         &param,
-        &protocol_and_hostname,
+        &context,
       )
       .await
     }
     RequestType::Community => {
       get_feed_community(
-        &mut context.pool(),
         &info.sort_type()?,
         &info.get_limit(),
         &info.get_page(),
         &param,
-        &protocol_and_hostname,
+        &context,
       )
       .await
     }
     RequestType::Front => {
       get_feed_front(
-        &mut context.pool(),
-        &jwt_secret,
         &info.sort_type()?,
         &info.get_limit(),
         &info.get_page(),
         &param,
-        &protocol_and_hostname,
+        &context,
       )
       .await
     }
-    RequestType::Inbox => {
-      get_feed_inbox(
-        &mut context.pool(),
-        &jwt_secret,
-        &param,
-        &protocol_and_hostname,
-      )
-      .await
-    }
+    RequestType::Inbox => get_feed_inbox(&param, &context).await,
   }
   .map_err(ErrorBadRequest)?;
 
@@ -243,13 +226,13 @@ async fn get_feed(
 
 #[tracing::instrument(skip_all)]
 async fn get_feed_user(
-  pool: &mut DbPool<'_>,
   sort_type: &SortType,
   limit: &i64,
   page: &i64,
   user_name: &str,
-  protocol_and_hostname: &str,
+  context: &LemmyContext,
 ) -> Result<ChannelBuilder, LemmyError> {
+  let pool = &mut context.pool();
   let site_view = SiteView::read_local(pool).await?;
   let person = Person::read_from_name(pool, user_name, false).await?;
 
@@ -264,7 +247,8 @@ async fn get_feed_user(
   .list(pool)
   .await?;
 
-  let items = create_post_items(posts, protocol_and_hostname)?;
+  let protocol_and_hostname = context.settings().get_protocol_and_hostname();
+  let items = create_post_items(posts, &protocol_and_hostname)?;
 
   let mut channel_builder = ChannelBuilder::default();
   channel_builder
@@ -278,13 +262,13 @@ async fn get_feed_user(
 
 #[tracing::instrument(skip_all)]
 async fn get_feed_community(
-  pool: &mut DbPool<'_>,
   sort_type: &SortType,
   limit: &i64,
   page: &i64,
   community_name: &str,
-  protocol_and_hostname: &str,
+  context: &LemmyContext,
 ) -> Result<ChannelBuilder, LemmyError> {
+  let pool = &mut context.pool();
   let site_view = SiteView::read_local(pool).await?;
   let community = Community::read_from_name(pool, community_name, false).await?;
 
@@ -298,7 +282,8 @@ async fn get_feed_community(
   .list(pool)
   .await?;
 
-  let items = create_post_items(posts, protocol_and_hostname)?;
+  let protocol_and_hostname = context.settings().get_protocol_and_hostname();
+  let items = create_post_items(posts, &protocol_and_hostname)?;
 
   let mut channel_builder = ChannelBuilder::default();
   channel_builder
@@ -316,16 +301,16 @@ async fn get_feed_community(
 
 #[tracing::instrument(skip_all)]
 async fn get_feed_front(
-  pool: &mut DbPool<'_>,
-  jwt_secret: &str,
   sort_type: &SortType,
   limit: &i64,
   page: &i64,
   jwt: &str,
-  protocol_and_hostname: &str,
+  context: &LemmyContext,
 ) -> Result<ChannelBuilder, LemmyError> {
+  let pool = &mut context.pool();
+  let protocol_and_hostname = context.settings().get_protocol_and_hostname();
   let site_view = SiteView::read_local(pool).await?;
-  let local_user_id = LocalUserId(Claims::decode(jwt, jwt_secret)?.claims.sub);
+  let local_user_id = LocalUserId(Claims::validate(jwt, context).await?.claims.sub);
   let local_user = LocalUserView::read(pool, local_user_id).await?;
 
   let posts = PostQuery {
@@ -339,7 +324,7 @@ async fn get_feed_front(
   .list(pool)
   .await?;
 
-  let items = create_post_items(posts, protocol_and_hostname)?;
+  let items = create_post_items(posts, &protocol_and_hostname)?;
 
   let mut channel_builder = ChannelBuilder::default();
   channel_builder
@@ -356,14 +341,12 @@ async fn get_feed_front(
 }
 
 #[tracing::instrument(skip_all)]
-async fn get_feed_inbox(
-  pool: &mut DbPool<'_>,
-  jwt_secret: &str,
-  jwt: &str,
-  protocol_and_hostname: &str,
-) -> Result<ChannelBuilder, LemmyError> {
+async fn get_feed_inbox(jwt: &str, context: &LemmyContext) -> Result<ChannelBuilder, LemmyError> {
+  let pool = &mut context.pool();
+  let protocol_and_hostname = context.settings().get_protocol_and_hostname();
+
   let site_view = SiteView::read_local(pool).await?;
-  let local_user_id = LocalUserId(Claims::decode(jwt, jwt_secret)?.claims.sub);
+  let local_user_id = LocalUserId(Claims::validate(jwt, context).await?.claims.sub);
   let local_user = LocalUser::read(pool, local_user_id).await?;
   let person_id = local_user.person_id;
   let show_bot_accounts = local_user.show_bot_accounts;
@@ -392,7 +375,7 @@ async fn get_feed_inbox(
   .list(pool)
   .await?;
 
-  let items = create_reply_and_mention_items(replies, mentions, protocol_and_hostname)?;
+  let items = create_reply_and_mention_items(replies, mentions, &protocol_and_hostname)?;
 
   let mut channel_builder = ChannelBuilder::default();
   channel_builder
