@@ -1,7 +1,9 @@
 use crate::{
   diesel::dsl::IntervalDsl,
   newtypes::InstanceId,
-  schema::{federation_allowlist, federation_blocklist, instance, local_site, site},
+  schema::{
+    federation_allowlist, federation_blocklist, federation_limitedlist, instance, local_site, site,
+  },
   source::instance::{Instance, InstanceForm},
   utils::{functions::lower, get_conn, naive_now, DbPool},
 };
@@ -9,8 +11,7 @@ use diesel::{
   dsl::{insert_into, now},
   result::Error,
   sql_types::{Nullable, Timestamp},
-  ExpressionMethods,
-  QueryDsl,
+  ExpressionMethods, QueryDsl,
 };
 use diesel_async::RunQueryDsl;
 
@@ -80,6 +81,15 @@ impl Instance {
     let conn = &mut get_conn(pool).await?;
     instance::table
       .inner_join(federation_allowlist::table)
+      .select(instance::all_columns)
+      .get_results(conn)
+      .await
+  }
+
+  pub async fn limitedlist(pool: &mut DbPool<'_>) -> Result<Vec<Self>, Error> {
+    let conn = &mut get_conn(pool).await?;
+    instance::table
+      .inner_join(federation_limitedlist::table)
       .select(instance::all_columns)
       .get_results(conn)
       .await

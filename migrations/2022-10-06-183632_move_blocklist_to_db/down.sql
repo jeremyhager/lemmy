@@ -74,5 +74,7 @@ DROP TABLE federation_allowlist;
 
 DROP TABLE federation_blocklist;
 
+DROP TABLE federation_limtedlist;
+
 DROP TABLE instance;
 

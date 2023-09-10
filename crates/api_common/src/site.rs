@@ -2,44 +2,20 @@ use crate::sensitive::Sensitive;
 use lemmy_db_schema::{
   newtypes::{CommentId, CommunityId, LanguageId, PersonId, PostId},
   source::{instance::Instance, language::Language, tagline::Tagline},
-  ListingType,
-  ModlogActionType,
-  RegistrationMode,
-  SearchType,
-  SortType,
+  ListingType, ModlogActionType, RegistrationMode, SearchType, SortType,
 };
 use lemmy_db_views::structs::{
-  CommentView,
-  CustomEmojiView,
-  LocalUserView,
-  PostView,
-  RegistrationApplicationView,
-  SiteView,
+  CommentView, CustomEmojiView, LocalUserView, PostView, RegistrationApplicationView, SiteView,
 };
 use lemmy_db_views_actor::structs::{
-  CommunityBlockView,
-  CommunityFollowerView,
-  CommunityModeratorView,
-  CommunityView,
-  PersonBlockView,
-  PersonView,
+  CommunityBlockView, CommunityFollowerView, CommunityModeratorView, CommunityView,
+  PersonBlockView, PersonView,
 };
 use lemmy_db_views_moderator::structs::{
-  AdminPurgeCommentView,
-  AdminPurgeCommunityView,
-  AdminPurgePersonView,
-  AdminPurgePostView,
-  ModAddCommunityView,
-  ModAddView,
-  ModBanFromCommunityView,
-  ModBanView,
-  ModFeaturePostView,
-  ModHideCommunityView,
-  ModLockPostView,
-  ModRemoveCommentView,
-  ModRemoveCommunityView,
-  ModRemovePostView,
-  ModTransferCommunityView,
+  AdminPurgeCommentView, AdminPurgeCommunityView, AdminPurgePersonView, AdminPurgePostView,
+  ModAddCommunityView, ModAddView, ModBanFromCommunityView, ModBanView, ModFeaturePostView,
+  ModHideCommunityView, ModLockPostView, ModRemoveCommentView, ModRemoveCommunityView,
+  ModRemovePostView, ModTransferCommunityView,
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -181,6 +157,7 @@ pub struct CreateSite {
   pub captcha_difficulty: Option<String>,
   pub allowed_instances: Option<Vec<String>>,
   pub blocked_instances: Option<Vec<String>>,
+  pub limited_instances: Option<Vec<String>>,
   pub taglines: Option<Vec<String>>,
   pub registration_mode: Option<RegistrationMode>,
   pub auth: Sensitive<String>,
@@ -257,6 +234,8 @@ pub struct EditSite {
   pub allowed_instances: Option<Vec<String>>,
   /// A list of blocked instances.
   pub blocked_instances: Option<Vec<String>>,
+  /// A list of limited instances.
+  pub limited_instances: Option<Vec<String>>,
   /// A list of taglines shown at the top of the front page.
   pub taglines: Option<Vec<String>>,
   pub registration_mode: Option<RegistrationMode>,

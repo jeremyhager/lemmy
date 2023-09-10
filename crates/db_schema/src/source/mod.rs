@@ -15,6 +15,7 @@ pub mod custom_emoji_keyword;
 pub mod email_verification;
 pub mod federation_allowlist;
 pub mod federation_blocklist;
+pub mod federation_limitedlist;
 pub mod instance;
 pub mod language;
 pub mod local_site;

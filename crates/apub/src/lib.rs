@@ -3,10 +3,14 @@ use activitypub_federation::config::{Data, UrlVerifier};
 use async_trait::async_trait;
 use lemmy_api_common::context::LemmyContext;
 use lemmy_db_schema::{
+  impls::local_site,
   source::{activity::ReceivedActivity, instance::Instance, local_site::LocalSite},
   utils::{ActualDbPool, DbPool},
 };
-use lemmy_utils::error::{LemmyError, LemmyErrorType, LemmyResult};
+use lemmy_utils::{
+  apub,
+  error::{LemmyError, LemmyErrorType, LemmyResult},
+};
 use moka::future::Cache;
 use once_cell::sync::Lazy;
 use std::{sync::Arc, time::Duration};
@@ -51,6 +55,30 @@ impl UrlVerifier for VerifyUrlData {
         error_type: LemmyErrorType::DomainBlocked(_),
         ..
       } => "Domain is blocked",
+      LemmyError {
+        error_type: LemmyErrorType::DomainCantPost(_),
+        ..
+      } => "Domain is not allowed to post",
+      LemmyError {
+        error_type: LemmyErrorType::DomainCantVote(_),
+        ..
+      } => "Domain is not allowed to vote",
+      LemmyError {
+        error_type: LemmyErrorType::DomainCantComment(_),
+        ..
+      } => "Domain is not allowed to comment",
+      LemmyError {
+        error_type: LemmyErrorType::DomainCantReport(_),
+        ..
+      } => "Domain is not allowed to report",
+      LemmyError {
+        error_type: LemmyErrorType::DomainCantPrivateMessage(_),
+        ..
+      } => "Domain is not allowed to PrivateMessage",
+      LemmyError {
+        error_type: LemmyErrorType::DomainNotAllowedInAll(_),
+        ..
+      } => "Domain is not allowed in All",
       LemmyError {
         error_type: LemmyErrorType::DomainNotInAllowList(_),
         ..
@@ -107,6 +135,7 @@ pub(crate) struct LocalSiteData {
   local_site: Option<LocalSite>,
   allowed_instances: Vec<Instance>,
   blocked_instances: Vec<Instance>,
+  limited_instances: Vec<Instance>,
 }
 
 pub(crate) async fn local_site_data_cached(
@@ -121,20 +150,22 @@ pub(crate) async fn local_site_data_cached(
   Ok(
     CACHE
       .try_get_with((), async {
-        let (local_site, allowed_instances, blocked_instances) =
+        let (local_site, allowed_instances, blocked_instances, limited_instances) =
           lemmy_db_schema::try_join_with_pool!(pool => (
             // LocalSite may be missing
             |pool| async {
               Ok(LocalSite::read(pool).await.ok())
             },
             Instance::allowlist,
-            Instance::blocklist
+            Instance::blocklist,
+            Instance::limitedlist
           ))?;
 
         Ok::<_, diesel::result::Error>(Arc::new(LocalSiteData {
           local_site,
           allowed_instances,
           blocked_instances,
+          limited_instances,
         }))
       })
       .await?,
@@ -178,6 +209,47 @@ pub(crate) async fn check_apub_id_valid_with_strictness(
       return Err(LemmyErrorType::FederationDisabledByStrictAllowList)?;
     }
   }
+  Ok(())
+}
+
+/// create seperate function for now, eventually replace it in the check_apub_id_valid() fn
+pub(crate) async fn check_apub_id_valid_with_options(
+  apub_id: &Url,
+  local_site_data: &LocalSiteData,
+) -> Result<(), LemmyError> {
+  let domain = apub_id.domain().expect("apud id has domain").to_string();
+
+  // let site = match local_site_data {
+
+  // }
+
+  if !local_site_data
+    .local_site
+    .as_ref()
+    .map(|l| l.federation_enabled)
+    .unwrap_or(true)
+  {
+    Err(LemmyErrorType::FederationDisabled)?;
+  }
+
+  if local_site_data
+    .blocked_instances
+    .iter()
+    .any(|i: &Instance| domain.to_lowercase().eq(&i.domain.to_lowercase()))
+  {
+    Err(LemmyErrorType::DomainBlocked(domain.clone()))?;
+  }
+
+  // Only check this if there are instances in the allowlist
+  if !local_site_data.allowed_instances.is_empty()
+    && !local_site_data
+      .allowed_instances
+      .iter()
+      .any(|i| domain.to_lowercase().eq(&i.domain.to_lowercase()))
+  {
+    Err(LemmyErrorType::DomainNotInAllowList(domain))?;
+  }
+
   Ok(())
 }
 

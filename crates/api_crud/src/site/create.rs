@@ -5,12 +5,8 @@ use lemmy_api_common::{
   context::LemmyContext,
   site::{CreateSite, SiteResponse},
   utils::{
-    generate_site_inbox_url,
-    is_admin,
-    local_site_rate_limit_to_rate_limit_config,
-    local_user_view_from_jwt,
-    sanitize_html,
-    sanitize_html_opt,
+    generate_site_inbox_url, is_admin, local_site_rate_limit_to_rate_limit_config,
+    local_user_view_from_jwt, sanitize_html, sanitize_html_opt,
   },
 };
 use lemmy_db_schema::{
@@ -30,11 +26,8 @@ use lemmy_utils::{
   utils::{
     slurs::{check_slurs, check_slurs_opt},
     validation::{
-      build_and_check_regex,
-      check_site_visibility_valid,
-      is_valid_body_field,
-      site_description_length_check,
-      site_name_length_check,
+      build_and_check_regex, check_site_visibility_valid, is_valid_body_field,
+      site_description_length_check, site_name_length_check,
     },
   },
 };
@@ -587,6 +580,7 @@ mod tests {
       captcha_difficulty: None,
       allowed_instances: None,
       blocked_instances: None,
+      limited_instances: None,
       taglines: None,
       registration_mode: site_registration_mode,
       auth: Default::default(),

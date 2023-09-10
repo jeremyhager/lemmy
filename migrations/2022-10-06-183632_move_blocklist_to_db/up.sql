@@ -78,7 +78,7 @@ ALTER TABLE person
 ALTER TABLE community
     ALTER COLUMN instance_id SET NOT NULL;
 
--- Create allowlist and blocklist tables
+-- Create allowlist, blocklist, and limtedlist tables
 CREATE TABLE federation_allowlist (
     id serial PRIMARY KEY,
     instance_id int REFERENCES instance ON UPDATE CASCADE ON DELETE CASCADE NOT NULL UNIQUE,
@@ -92,6 +92,13 @@ CREATE TABLE federation_blocklist (
     published timestamp NOT NULL DEFAULT now(),
     updated timestamp NULL
 );
+
+CREATE TABLE federation_limtedlist (
+    id serial PRIMARY KEY,
+    instance_id int REFERENCES instance ON UPDATE CASCADE ON DELETE CASCADE NOT NULL UNIQUE,
+    published timestamp NOT NULL DEFAULT now(),
+    updated timestamp NULL
+)
 
 -- Move all the extra site settings-type columns to a local_site table
 -- Add a lot of other fields currently in the lemmy.hjson

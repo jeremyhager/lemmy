@@ -197,6 +197,15 @@ pub enum LemmyErrorType {
   FederationDisabled,
   DomainBlocked(String),
   DomainNotInAllowList(String),
+  //
+  DomainCantPost(String),
+  DomainCantVote(String),
+  DomainCantComment(String),
+  DomainCantReport(String),
+  DomainCantPrivateMessage(String),
+  DomainCantView(String),
+  DomainNotAllowedInAll(String),
+  //
   FederationDisabledByStrictAllowList,
   SiteNameRequired,
   SiteNameLengthOverflow,

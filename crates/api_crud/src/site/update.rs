@@ -4,9 +4,7 @@ use lemmy_api_common::{
   context::LemmyContext,
   site::{EditSite, SiteResponse},
   utils::{
-    is_admin,
-    local_site_rate_limit_to_rate_limit_config,
-    local_user_view_from_jwt,
+    is_admin, local_site_rate_limit_to_rate_limit_config, local_user_view_from_jwt,
     sanitize_html_opt,
   },
 };
@@ -15,6 +13,7 @@ use lemmy_db_schema::{
     actor_language::SiteLanguage,
     federation_allowlist::FederationAllowList,
     federation_blocklist::FederationBlockList,
+    federation_limitedlist::FederationLimitedList,
     local_site::{LocalSite, LocalSiteUpdateForm},
     local_site_rate_limit::{LocalSiteRateLimit, LocalSiteRateLimitUpdateForm},
     local_user::LocalUser,
@@ -31,11 +30,8 @@ use lemmy_utils::{
   utils::{
     slurs::check_slurs_opt,
     validation::{
-      build_and_check_regex,
-      check_site_visibility_valid,
-      is_valid_body_field,
-      site_description_length_check,
-      site_name_length_check,
+      build_and_check_regex, check_site_visibility_valid, is_valid_body_field,
+      site_description_length_check, site_name_length_check,
     },
   },
 };
@@ -135,6 +131,8 @@ pub async fn update_site(
   FederationAllowList::replace(&mut context.pool(), allowed).await?;
   let blocked = data.blocked_instances.clone();
   FederationBlockList::replace(&mut context.pool(), blocked).await?;
+  let limited = data.limited_instances.clone();
+  FederationLimitedList::replace(&mut context.pool(), limited).await?;
 
   // TODO can't think of a better way to do this.
   // If the server suddenly requires email verification, or required applications, no old users
@@ -585,6 +583,7 @@ mod tests {
       captcha_difficulty: None,
       allowed_instances: None,
       blocked_instances: None,
+      limited_instances: None,
       taglines: None,
       registration_mode: site_registration_mode,
       reports_email_admins: None,
